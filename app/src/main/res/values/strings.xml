@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HausaNovels</string>
+    <string name="web_app_url">https://hausanovels.ng/</string>
+    <string name="no_app_for_link">No app can open this link.</string>
+    <string name="no_file_picker">No file picker found on this phone.</string>
+
+    <string-array name="in_app_hosts">
+        <item>hausanovels.ng</item>
+        <item>checkout.paystack.com</item>
+        <item>standard.paystack.co</item>
+        <item>paystack.com</item>
+        <item>paystack.co</item>
+    </string-array>
+</resources>
