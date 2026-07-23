@@ -39,9 +39,10 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            setTheme(R.style.Theme_HausaNovels);
-        }
+        // Apply the real app theme after the launch/splash theme has been used.
+        // This avoids relying on postSplashScreenTheme, which belongs to the
+        // AndroidX splashscreen compat flow and breaks this no-AndroidX project.
+        setTheme(R.style.Theme_HausaNovels);
 
         super.onCreate(savedInstanceState);
 
