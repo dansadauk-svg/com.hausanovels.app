@@ -27,9 +27,13 @@ jobs:
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           PROPS
+      - name: Build signed APK
+        run: gradle :app:assembleRelease
       - name: Build signed AAB
         run: gradle :app:bundleRelease
       - uses: actions/upload-artifact@v4
         with:
-          name: hausanovels-release-aab
-          path: app/build/outputs/bundle/release/*.aab
+          name: hausanovels-release-files
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
