@@ -1,49 +1,35 @@
-name: Build APK
+name: Build Signed Android App
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Android APK
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android packages
-        run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.10.2"
-
-      - name: Build debug APK
-        run: gradle :app:assembleDebug
-
-      - name: Build unsigned release APK
-        run: gradle :app:assembleRelease
-
-      - name: Upload APKs
-        uses: actions/upload-artifact@v4
+      - name: Create signing files
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > hausanovels-release-key.jks
+          cat > key.properties <<PROPS
+          storeFile=../hausanovels-release-key.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          PROPS
+      - name: Build signed AAB
+        run: gradle :app:bundleRelease
+      - uses: actions/upload-artifact@v4
         with:
-          name: hausanovels-apks
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/release/*.apk
+          name: hausanovels-release-aab
+          path: app/build/outputs/bundle/release/*.aab
