@@ -284,6 +284,14 @@ public final class MainActivity extends Activity {
 
     private final class HausaNovelsWebViewClient extends WebViewClient {
         @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+
+            String cssFix = "javascript:(function(){var s=document.createElement('style');s.innerHTML='header, .header, nav {height:80px!important;min-height:80px!important;padding-top:8px!important;padding-bottom:8px!important;} header *,.header * {max-height:64px;} h1,.logo-title,.brand-title {font-size:42px!important;} .hamburger,.menu-button {transform:scale(.85);}' ;document.head.appendChild(s);})()";
+            view.evaluateJavascript(cssFix, null);
+        }
+
+        @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Uri uri = request.getUrl();
             if (shouldLoadInApp(uri)) {
