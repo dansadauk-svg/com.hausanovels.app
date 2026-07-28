@@ -2,6 +2,12 @@
 <resources>
     <string name="app_name">HausaNovels</string>
     <string name="web_app_url">https://hausanovels.ng/</string>
+    <string name="splash_tagline">Hausa stories, beautifully told.</string>
+    <string name="loading_preparing">Preparing your library…</string>
+    <string name="loading_connecting">Connecting securely…</string>
+    <string name="loading_content">Loading stories…</string>
+    <string name="loading_finishing">Almost ready…</string>
+    <string name="loading_ready">Ready</string>
     <string name="no_app_for_link">No app can open this link.</string>
     <string name="no_file_picker">No file picker found on this phone.</string>
 

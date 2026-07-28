@@ -1,97 +1,96 @@
-# HausaNovels Web To APK
+# HausaNovels Android — GitHub-ready v1.2.0
 
-GitHub-ready Android WebView APK project for `https://hausanovels.ng/`.
+Android WebView app for `https://hausanovels.ng/`.
 
-## What is included
+## Included improvements
 
-- Native Android WebView wrapper.
-- GitHub Actions APK build workflow.
-- PNG app icon resources.
-- Splash screen with only the icon on the splash background.
-- Camera cutout and notch safe-area padding.
-- Back button support.
-- File picker support for upload fields.
-- Paystack checkout hosts allowed inside the WebView.
-- External links open in the user's browser or related app.
+- Android 16 / API level 36 target.
+- Professional two-stage splash experience.
+- Transparent HausaNovels logo with real page-load percentage.
+- WebView viewport and typography tuned to match mobile Chrome closely.
+- Chrome-style user agent without the old app suffix.
+- Android 16 edge-to-edge and safe-area handling.
+- Back navigation and predictive back support.
+- File upload chooser.
+- Paystack checkout inside the app.
+- Google sign-in opens securely in the phone browser and returns through the website app link.
+- GitHub Actions builds a debug APK and, when signing secrets are added, a signed APK and AAB.
 
-## Main settings
+## Upload to GitHub
 
-Change these when needed:
+1. Create a new empty GitHub repository.
+2. Extract this ZIP.
+3. Upload the contents of this folder to the repository root.
+4. Open **Actions → Build HausaNovels Android → Run workflow**.
+5. Download the `hausanovels-android-v1.2.0` artifact.
+
+## Release signing secrets
+
+Add these under **GitHub repository → Settings → Secrets and variables → Actions**:
+
+- `KEYSTORE_BASE64`
+- `KEYSTORE_PASSWORD`
+- `KEY_ALIAS`
+- `KEY_PASSWORD`
+
+Convert a keystore to base64 before saving `KEYSTORE_BASE64`:
+
+```bash
+base64 -w 0 hausanovels-release-key.jks
+```
+
+On macOS:
+
+```bash
+base64 hausanovels-release-key.jks | tr -d '\n'
+```
+
+The repository deliberately does not contain a private keystore.
+
+## Main configuration
+
+Website URL and in-app payment hosts:
 
 `app/src/main/res/values/strings.xml`
 
-```xml
-<string name="app_name">HausaNovels</string>
-<string name="web_app_url">https://hausanovels.ng/</string>
-```
-
-Package name:
+Package name, API level and version:
 
 `app/build.gradle`
 
+Transparent splash logo:
+
+`app/src/main/res/drawable/hausanovels_logo_transparent.png`
+
+## Splash progress
+
+The Android system splash displays first. The app then shows a branded loading screen with the transparent logo, loading message, progress bar and actual WebView loading percentage. It fades out after the first page becomes ready.
+
+## Chrome-like page sizing
+
+The app fixes WebView text zoom at 100%, uses a wide device viewport, disables automatic overview zoom and removes the old `HausaNovelsApp` user-agent suffix. This prevents the website from rendering larger app-only text.
+
+Android System WebView is not the complete Chrome browser, so browser controls and the exact installed engine version can differ. Update both Chrome and Android System WebView on test phones for the closest rendering match.
+
+## Google sign-in return link
+
+The manifest supports verified links for:
+
+- `https://hausanovels.ng/...`
+- `https://www.hausanovels.ng/...`
+
+For automatic return to the app, publish a valid Digital Asset Links file at:
+
+`https://hausanovels.ng/.well-known/assetlinks.json`
+
+## Play Console
+
+This project targets Android 16:
+
 ```gradle
-applicationId "ng.hausanovels.app"
+compileSdk 36
+targetSdk 36
 ```
 
-If you change the package name, also change the Java folder and the first line in:
+Before every Play Console upload, increase `versionCode` in `app/build.gradle` above the version code of the previous release.
 
-`app/src/main/java/ng/hausanovels/app/MainActivity.java`
-
-## Splash screen
-
-The splash screen is handled in:
-
-- `app/src/main/res/drawable/splash_screen.xml`
-- `app/src/main/res/drawable/splash_icon.png`
-- `app/src/main/res/values/colors.xml`
-- `app/src/main/res/values-v31/styles.xml`
-
-The splash background is:
-
-```xml
-<color name="splash_background">#050816</color>
-```
-
-Only the PNG icon is centered on the splash screen.
-
-## Camera cutout and safe area
-
-The app avoids the top camera cutout by applying Android window insets in:
-
-`app/src/main/java/ng/hausanovels/app/MainActivity.java`
-
-It pads the WebView away from:
-
-- status bar
-- navigation bar
-- display cutout
-- camera notch/hole area
-
-The WordPress theme already has:
-
-```html
-viewport-fit=cover
-```
-
-So the Android shell and the website are both prepared for safe-area handling.
-
-## Build APK With GitHub
-
-1. Create a new GitHub repository.
-2. Upload all files from this folder to the repository root.
-3. Go to the repository on GitHub.
-4. Open **Actions**.
-5. Run **Build APK**.
-6. Download the artifact named `hausanovels-apks`.
-
-The debug APK is easiest for direct phone testing:
-
-`app-debug.apk`
-
-The release APK created by this workflow is unsigned. For Play Store upload, you will need a signed release or Android App Bundle later.
-
-## Testing while DNS is still propagating
-
-You can build and install the APK while DNS is still propagating. If `hausanovels.ng` is not resolving yet on a phone, the app will show a connection or website loading issue until DNS finishes.
-
-For best testing, open the site in Chrome on the same phone first. If Chrome can open it, the APK should open it too.
+See `docs/PLAY-CONSOLE.md` for release details.

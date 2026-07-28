@@ -4,25 +4,33 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.Insets;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.HashSet;
@@ -31,41 +39,47 @@ import java.util.Set;
 
 public final class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 4107;
+    private static final int WEB_CACHE_VERSION = 5;
+
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private WebView webView;
+    private FrameLayout appRoot;
+    private View splashOverlay;
+    private ProgressBar splashProgress;
+    private TextView loadingPercent;
+    private TextView loadingStatus;
     private ValueCallback<Uri[]> filePathCallback;
     private String startUrl;
     private Set<String> inAppHosts;
+    private int displayedProgress = 0;
+    private boolean initialPageFinished = false;
+    private boolean splashDismissed = false;
+    private boolean showingOfflinePage = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Apply the real app theme after the launch/splash theme has been used.
-        // This avoids relying on postSplashScreenTheme, which belongs to the
-        // AndroidX splashscreen compat flow and breaks this no-AndroidX project.
         setTheme(R.style.Theme_HausaNovels);
-
         super.onCreate(savedInstanceState);
+
+        setContentView(R.layout.activity_main);
+        bindViews();
 
         startUrl = getString(R.string.web_app_url);
         inAppHosts = loadInAppHosts();
 
+        String deepLinkUrl = resolveIntentUrl(getIntent());
+        if (deepLinkUrl != null) {
+            startUrl = deepLinkUrl;
+        }
+
         configureWindow();
-
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(getColorCompat(R.color.app_background));
-        applySafeAreaPadding(root);
-
-        webView = new WebView(this);
-        root.addView(webView, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-        ));
-
-        setContentView(root);
         configureWebView();
+        registerPredictiveBack();
+        startProgressSafetyTimer();
 
-        if (savedInstanceState != null) {
-            webView.restoreState(savedInstanceState);
+        if (savedInstanceState != null && webView.restoreState(savedInstanceState) != null) {
+            updateSplashProgress(35);
         } else if (isNetworkAvailable()) {
             webView.loadUrl(startUrl);
         } else {
@@ -73,37 +87,58 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void bindViews() {
+        appRoot = findViewById(R.id.app_root);
+        webView = findViewById(R.id.web_view);
+        splashOverlay = findViewById(R.id.splash_overlay);
+        splashProgress = findViewById(R.id.splash_progress);
+        loadingPercent = findViewById(R.id.loading_percent);
+        loadingStatus = findViewById(R.id.loading_status);
+    }
+
     private void configureWindow() {
         Window window = getWindow();
-        window.setStatusBarColor(getColorCompat(R.color.splash_background));
-        window.setNavigationBarColor(getColorCompat(R.color.app_background));
+        window.setStatusBarColor(Color.TRANSPARENT);
+        window.setNavigationBarColor(Color.TRANSPARENT);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            WindowManager.LayoutParams attrs = window.getAttributes();
-            attrs.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
-            window.setAttributes(attrs);
+            WindowManager.LayoutParams attributes = window.getAttributes();
+            attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            window.setAttributes(attributes);
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = window.getInsetsController();
+            if (controller != null) {
+                controller.setSystemBarsAppearance(
+                        0,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                                | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                );
+            }
+        } else {
+            window.getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            );
         }
-    }
 
-    private void applySafeAreaPadding(View root) {
-        root.setOnApplyWindowInsetsListener((view, insets) -> {
-            int left = 0;
-            int top = 0;
-            int right = 0;
-            int bottom = 0;
+        appRoot.setOnApplyWindowInsetsListener((view, insets) -> {
+            int left;
+            int top;
+            int right;
+            int bottom;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                Insets safeInsets = insets.getInsets(
+                Insets safe = insets.getInsets(
                         WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
                 );
-                left = safeInsets.left;
-                top = safeInsets.top;
-                right = safeInsets.right;
-                bottom = safeInsets.bottom;
+                left = safe.left;
+                top = safe.top;
+                right = safe.right;
+                bottom = safe.bottom;
             } else {
                 left = insets.getSystemWindowInsetLeft();
                 top = insets.getSystemWindowInsetTop();
@@ -114,6 +149,7 @@ public final class MainActivity extends Activity {
             view.setPadding(left, top, right, bottom);
             return insets;
         });
+        appRoot.requestApplyInsets();
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -128,23 +164,119 @@ public final class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
-        settings.setSupportZoom(false);
-        settings.setBuiltInZoomControls(false);
+        settings.setLoadWithOverviewMode(false);
+        settings.setTextZoom(100);
+        settings.setDefaultFontSize(16);
+        settings.setDefaultFixedFontSize(13);
+        settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NORMAL);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " HausaNovelsApp/1.0");
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(false);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        // Use a Chrome-style mobile user agent without an app-specific suffix.
+        // This prevents the website from applying larger app-only typography.
+        String chromeStyleUserAgent = settings.getUserAgentString()
+                .replace("; wv", "")
+                .replace("Version/4.0 ", "");
+        settings.setUserAgentString(chromeStyleUserAgent);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            settings.setSafeBrowsingEnabled(true);
         }
 
+        WebView.setWebContentsDebuggingEnabled(false);
         webView.setBackgroundColor(getColorCompat(R.color.app_background));
-        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
         webView.setWebViewClient(new HausaNovelsWebViewClient());
         webView.setWebChromeClient(new HausaNovelsChromeClient());
-        webView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> openExternal(Uri.parse(url)));
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> openExternal(Uri.parse(url)));
+
+        clearWebCacheAfterAppUpgrade();
+    }
+
+    private void clearWebCacheAfterAppUpgrade() {
+        SharedPreferences preferences = getSharedPreferences("hausanovels_app", MODE_PRIVATE);
+        int storedVersion = preferences.getInt("web_cache_version", 0);
+        if (storedVersion < WEB_CACHE_VERSION) {
+            webView.clearCache(true);
+            preferences.edit().putInt("web_cache_version", WEB_CACHE_VERSION).apply();
+        }
+    }
+
+    private void startProgressSafetyTimer() {
+        mainHandler.postDelayed(() -> {
+            if (!splashDismissed && displayedProgress < 90) {
+                updateSplashProgress(90);
+                loadingStatus.setText(R.string.loading_finishing);
+            }
+        }, 12000L);
+    }
+
+    private void updateSplashProgress(int requestedProgress) {
+        if (splashDismissed) {
+            return;
+        }
+
+        int nextProgress = Math.max(displayedProgress, Math.min(100, requestedProgress));
+        displayedProgress = nextProgress;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            splashProgress.setProgress(nextProgress, true);
+        } else {
+            splashProgress.setProgress(nextProgress);
+        }
+        loadingPercent.setText(String.format(Locale.US, "%d%%", nextProgress));
+
+        if (nextProgress < 25) {
+            loadingStatus.setText(R.string.loading_preparing);
+        } else if (nextProgress < 55) {
+            loadingStatus.setText(R.string.loading_connecting);
+        } else if (nextProgress < 88) {
+            loadingStatus.setText(R.string.loading_content);
+        } else if (nextProgress < 100) {
+            loadingStatus.setText(R.string.loading_finishing);
+        } else {
+            loadingStatus.setText(R.string.loading_ready);
+        }
+
+        if (nextProgress >= 100 && initialPageFinished) {
+            dismissSplashOverlay();
+        }
+    }
+
+    private void dismissSplashOverlay() {
+        if (splashDismissed) {
+            return;
+        }
+
+        splashDismissed = true;
+        splashOverlay.animate()
+                .alpha(0f)
+                .setDuration(320L)
+                .withEndAction(() -> {
+                    splashOverlay.setVisibility(View.GONE);
+                    splashOverlay.setClickable(false);
+                })
+                .start();
+    }
+
+    private String resolveIntentUrl(Intent intent) {
+        if (intent == null || intent.getData() == null) {
+            return null;
+        }
+
+        Uri uri = intent.getData();
+        return shouldLoadInApp(uri) ? uri.toString() : null;
     }
 
     private Set<String> loadInAppHosts() {
@@ -174,6 +306,11 @@ public final class MainActivity extends Activity {
         }
 
         String lowerScheme = scheme.toLowerCase(Locale.US);
+        if ("about".equals(lowerScheme) || "data".equals(lowerScheme)
+                || "blob".equals(lowerScheme) || "javascript".equals(lowerScheme)) {
+            return true;
+        }
+
         if (!"http".equals(lowerScheme) && !"https".equals(lowerScheme)) {
             return false;
         }
@@ -215,30 +352,66 @@ public final class MainActivity extends Activity {
     }
 
     private boolean isNetworkAvailable() {
-        ConnectivityManager connectivity = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        if (connectivity == null) {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) {
             return false;
         }
 
-        NetworkInfo activeNetwork = connectivity.getActiveNetworkInfo();
-        return activeNetwork != null && activeNetwork.isConnected();
+        Network activeNetwork = connectivityManager.getActiveNetwork();
+        if (activeNetwork == null) {
+            return false;
+        }
+
+        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
+        return capabilities != null
+                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
     }
 
     private void showOfflinePage() {
+        if (showingOfflinePage) {
+            return;
+        }
+        showingOfflinePage = true;
+
         String retryUrl = startUrl.replace("\\", "\\\\").replace("'", "\\'");
         String html = "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
-                + "<style>body{margin:0;background:#050816;color:#f8fafc;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:28px;text-align:center}"
-                + "main{max-width:360px}h1{font-size:22px;margin:0 0 10px}p{color:#a8b3c7;line-height:1.5}button{background:#21c77a;border:0;color:#03110a;padding:13px 18px;border-radius:8px;font-weight:700}</style></head>"
+                + "<style>body{box-sizing:border-box;margin:0;background:#050816;color:#f8fafc;font-family:system-ui,-apple-system,Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:28px;text-align:center}"
+                + "main{max-width:360px}h1{font-size:22px;margin:0 0 10px}p{color:#a8b3c7;line-height:1.5}button{background:#21c77a;border:0;color:#03110a;padding:13px 18px;border-radius:10px;font-weight:800}</style></head>"
                 + "<body><main><h1>No internet connection</h1><p>Please connect to the internet and try again.</p><button onclick=\"window.location.href='" + retryUrl + "'\">Retry</button></main></body></html>";
         webView.loadDataWithBaseURL(startUrl, html, "text/html", "UTF-8", null);
     }
 
-    private int getColorCompat(int colorRes) {
+    private int getColorCompat(int colorResource) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return getColor(colorRes);
+            return getColor(colorResource);
         }
+        return getResources().getColor(colorResource);
+    }
 
-        return getResources().getColor(colorRes);
+    private void registerPredictiveBack() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                    () -> {
+                        if (webView != null && webView.canGoBack()) {
+                            webView.goBack();
+                        } else {
+                            finish();
+                        }
+                    }
+            );
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+
+        String deepLinkUrl = resolveIntentUrl(intent);
+        if (deepLinkUrl != null && webView != null) {
+            webView.loadUrl(deepLinkUrl);
+        }
     }
 
     @Override
@@ -251,12 +424,16 @@ public final class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            super.onBackPressed();
             return;
         }
 
-        super.onBackPressed();
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     @Override
@@ -274,7 +451,12 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        mainHandler.removeCallbacksAndMessages(null);
+
         if (webView != null) {
+            webView.stopLoading();
+            webView.setWebChromeClient(null);
+            webView.setWebViewClient(null);
             webView.destroy();
             webView = null;
         }
@@ -283,14 +465,6 @@ public final class MainActivity extends Activity {
     }
 
     private final class HausaNovelsWebViewClient extends WebViewClient {
-        @Override
-        public void onPageFinished(WebView view, String url) {
-            super.onPageFinished(view, url);
-
-            String cssFix = "javascript:(function(){var s=document.createElement('style');s.innerHTML='header, .header, nav {height:80px!important;min-height:80px!important;padding-top:8px!important;padding-bottom:8px!important;} header *,.header * {max-height:64px;} h1,.logo-title,.brand-title {font-size:42px!important;} .hamburger,.menu-button {transform:scale(.85);}' ;document.head.appendChild(s);})()";
-            view.evaluateJavascript(cssFix, null);
-        }
-
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Uri uri = request.getUrl();
@@ -312,11 +486,43 @@ public final class MainActivity extends Activity {
             openExternal(uri);
             return true;
         }
+
+        @Override
+        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            super.onPageStarted(view, url, favicon);
+            if (!splashDismissed) {
+                updateSplashProgress(8);
+            }
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+            initialPageFinished = true;
+            updateSplashProgress(100);
+        }
+
+        @Override
+        public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+            super.onReceivedError(view, request, error);
+            if (request.isForMainFrame() && !showingOfflinePage) {
+                showOfflinePage();
+            }
+        }
     }
 
     private final class HausaNovelsChromeClient extends WebChromeClient {
         @Override
-        public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+        public void onProgressChanged(WebView view, int newProgress) {
+            super.onProgressChanged(view, newProgress);
+            if (!splashDismissed) {
+                int visibleProgress = Math.min(99, Math.max(8, newProgress));
+                updateSplashProgress(visibleProgress);
+            }
+        }
+
+        @Override
+        public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams parameters) {
             if (filePathCallback != null) {
                 filePathCallback.onReceiveValue(null);
             }
@@ -324,7 +530,7 @@ public final class MainActivity extends Activity {
             filePathCallback = callback;
 
             try {
-                startActivityForResult(params.createIntent(), FILE_CHOOSER_REQUEST_CODE);
+                startActivityForResult(parameters.createIntent(), FILE_CHOOSER_REQUEST_CODE);
                 return true;
             } catch (ActivityNotFoundException ignored) {
                 filePathCallback = null;
