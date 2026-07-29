@@ -1,4 +1,4 @@
-name: Build HausaNovels TWA v2.1.4
+name: Build HausaNovels TWA v2.1.3
 
 on:
   workflow_dispatch:
@@ -44,74 +44,25 @@ jobs:
           gradle-version: '8.13'
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
-      - name: Validate clean Android source
+      - name: Remove obsolete Android sources
+        shell: bash
+        run: python3 tools/clean_android_tree.py
+
+      - name: Verify Android compatibility resources
         shell: bash
         run: python3 tools/verify_android_resources.py
 
-      - name: Prepare release signing
-        id: signing
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Build debug APK
+        run: gradle --no-daemon --stacktrace assembleDebug
+
+      - name: Generate debug certificate fingerprint and asset links
         shell: bash
         run: |
-          configured=0
-          [[ -n "$KEYSTORE_BASE64" ]] && configured=$((configured + 1))
-          [[ -n "$KEYSTORE_PASSWORD" ]] && configured=$((configured + 1))
-          [[ -n "$KEY_ALIAS" ]] && configured=$((configured + 1))
-          [[ -n "$KEY_PASSWORD" ]] && configured=$((configured + 1))
-
-          if [[ "$configured" -eq 0 ]]; then
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "Release signing secrets are not configured; only the debug APK will be produced." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          if [[ "$configured" -ne 4 ]]; then
-            echo "All four signing secrets are required: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD." >&2
-            exit 1
-          fi
-
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release.keystore
-          test -s release.keystore
-          keytool -list \
-            -keystore release.keystore \
-            -alias "$KEY_ALIAS" \
-            -storepass "$KEYSTORE_PASSWORD" >/dev/null
-
-          cat > key.properties <<EOF
-          storeFile=release.keystore
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          EOF
-
-          echo "enabled=true" >> "$GITHUB_OUTPUT"
-
-      - name: Build clean debug APK
-        shell: bash
-        run: gradle --no-daemon --stacktrace clean assembleDebug
-
-      - name: Generate debug APK certificate fingerprint and asset links
-        shell: bash
-        run: |
-          APK="$(find app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
-          test -n "$APK"
-          APKSIGNER="$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner"
-          test -x "$APKSIGNER"
-
-          CERTS="$($APKSIGNER verify --print-certs "$APK")"
-          RAW_SHA="$(printf '%s\n' "$CERTS" | awk -F': ' 'tolower($1) ~ /certificate sha-256 digest/ {print $2; exit}')"
-          test -n "$RAW_SHA"
-
-          python3 - "$RAW_SHA" <<'PY'
-          import json, pathlib, re, sys
-          raw = re.sub(r'[^0-9A-Fa-f]', '', sys.argv[1]).upper()
-          if len(raw) != 64:
-              raise SystemExit(f"Unexpected SHA-256 certificate digest: {sys.argv[1]!r}")
-          fingerprint = ':'.join(raw[i:i+2] for i in range(0, 64, 2))
+          DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
+          DEBUG_SHA=$(keytool -list -v -keystore "$DEBUG_KEYSTORE" -alias androiddebugkey -storepass android -keypass android | awk -F': ' '/SHA256:/{print $2; exit}')
+          python3 - "$DEBUG_SHA" <<'PY'
+          import json, pathlib, sys
+          fingerprint = sys.argv[1].strip()
           data = [{
               "relation": ["delegate_permission/common.handle_all_urls"],
               "target": {
@@ -123,37 +74,52 @@ jobs:
           pathlib.Path("assetlinks-debug.json").write_text(json.dumps(data, indent=2) + "\n")
           pathlib.Path("debug-sha256-fingerprint.txt").write_text(fingerprint + "\n")
           PY
-
-          echo "### Debug APK certificate SHA-256" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Debug certificate SHA-256" >> "$GITHUB_STEP_SUMMARY"
           echo '```text' >> "$GITHUB_STEP_SUMMARY"
           cat debug-sha256-fingerprint.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "This fingerprint was read from the APK itself, not from a presumed debug-keystore path." >> "$GITHUB_STEP_SUMMARY"
+          echo "Add this fingerprint in WordPress only for direct debug testing." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prepare release signing
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
+        run: |
+          if [[ -n "$KEYSTORE_BASE64" && -n "$KEYSTORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+            cat > key.properties <<EOF
+          storeFile=release.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "HAS_RELEASE_SIGNING=true" >> "$GITHUB_ENV"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "HAS_RELEASE_SIGNING=false" >> "$GITHUB_ENV"
+            echo "Release signing secrets are not configured; only the debug APK will be produced." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Build signed release APK and AAB
         if: steps.signing.outputs.enabled == 'true'
-        shell: bash
         run: gradle --no-daemon --stacktrace assembleRelease bundleRelease
 
-      - name: Generate release APK certificate fingerprint and asset links
+      - name: Generate release certificate fingerprint and asset links
         if: steps.signing.outputs.enabled == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         shell: bash
         run: |
-          APK="$(find app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
-          test -n "$APK"
-          APKSIGNER="$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner"
-          test -x "$APKSIGNER"
-
-          CERTS="$($APKSIGNER verify --print-certs "$APK")"
-          RAW_SHA="$(printf '%s\n' "$CERTS" | awk -F': ' 'tolower($1) ~ /certificate sha-256 digest/ {print $2; exit}')"
-          test -n "$RAW_SHA"
-
-          python3 - "$RAW_SHA" <<'PY'
-          import json, pathlib, re, sys
-          raw = re.sub(r'[^0-9A-Fa-f]', '', sys.argv[1]).upper()
-          if len(raw) != 64:
-              raise SystemExit(f"Unexpected SHA-256 certificate digest: {sys.argv[1]!r}")
-          fingerprint = ':'.join(raw[i:i+2] for i in range(0, 64, 2))
+          RELEASE_SHA=$(keytool -list -v -keystore release.keystore -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" | awk -F': ' '/SHA256:/{print $2; exit}')
+          python3 - "$RELEASE_SHA" <<'PY'
+          import json, pathlib, sys
+          fingerprint = sys.argv[1].strip()
           data = [{
               "relation": ["delegate_permission/common.handle_all_urls"],
               "target": {
@@ -165,17 +131,16 @@ jobs:
           pathlib.Path("assetlinks-release-upload-key.json").write_text(json.dumps(data, indent=2) + "\n")
           pathlib.Path("release-upload-key-sha256-fingerprint.txt").write_text(fingerprint + "\n")
           PY
-
-          echo "### Release APK certificate SHA-256" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Release upload-key SHA-256" >> "$GITHUB_STEP_SUMMARY"
           echo '```text' >> "$GITHUB_STEP_SUMMARY"
           cat release-upload-key-sha256-fingerprint.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "For a Play Store install, also use the Play App Signing SHA-256 from Play Console." >> "$GITHUB_STEP_SUMMARY"
+          echo "For the Play Store build, also add the Play App Signing SHA-256 fingerprint from Play Console." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload debug build
         uses: actions/upload-artifact@v4
         with:
-          name: hausanovels-twa-v2.1.4-debug
+          name: hausanovels-twa-v2.1.3-debug
           if-no-files-found: error
           retention-days: 14
           path: |
@@ -187,7 +152,7 @@ jobs:
         if: steps.signing.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: hausanovels-twa-v2.1.4-release
+          name: hausanovels-twa-v2.1.3-release
           if-no-files-found: error
           retention-days: 30
           path: |
