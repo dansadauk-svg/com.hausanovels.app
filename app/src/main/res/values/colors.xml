@@ -1,7 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- HausaNovels canonical brand colours. -->
     <color name="hn_background">#050816</color>
     <color name="hn_green">#21C77A</color>
     <color name="hn_gold">#F3B348</color>
+    <color name="hn_white">#F8FAFC</color>
     <color name="hn_text">#F8FAFC</color>
+
+    <!-- Android Browser Helper / API compatibility aliases. -->
+    <color name="app_background">#050816</color>
+    <color name="brand_green">#21C77A</color>
+
+    <!-- Legacy splash-layout aliases retained so old repository files cannot break AAPT linking. -->
+    <color name="brand_gold">#F3B348</color>
+    <color name="progress_track">#33FFFFFF</color>
+    <color name="splash_background">#050816</color>
+    <color name="splash_background_end">#071226</color>
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#A9B4C6</color>
+    <color name="brand_green_soft">#3321C77A</color>
+
+    <!-- Conventional aliases retained for Android libraries and future UI. -->
+    <color name="colorPrimary">#21C77A</color>
+    <color name="colorPrimaryDark">#050816</color>
+    <color name="colorAccent">#21C77A</color>
 </resources>

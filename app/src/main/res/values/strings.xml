@@ -2,5 +2,11 @@
 <resources>
     <string name="app_name">HausaNovels</string>
     <string name="splash_title">Hausa Novels</string>
+    <string name="web_app_url" translatable="false">https://hausanovels.ng/?utm_source=twa&amp;twa=1</string>
+
+    <!-- Empty compatibility strings keep any obsolete splash layout visually minimal. -->
+    <string name="splash_tagline" translatable="false"></string>
+    <string name="loading_preparing" translatable="false"></string>
+
     <string name="asset_statements" translatable="false">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://hausanovels.ng\"}}]</string>
 </resources>

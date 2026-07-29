@@ -1,12 +1,11 @@
-# HausaNovels Android TWA v2.1.4
+# HausaNovels Android TWA v2.1.3
 
 GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 
 ## Included fixes
 
-- Uses one clean TWA source tree with no old WebView `MainActivity.java` or obsolete splash resources.
-- Validates every local Android resource reference before Gradle starts.
-- Reads debug and release certificate fingerprints from the APK files actually built, so it does not depend on `$HOME/.android/debug.keystore`.
+- Fixes the Java compilation failure caused by the missing `web_app_url` string resource.
+- The GitHub workflow removes obsolete WebView source files, including old `MainActivity.java`, before compiling.
 - Google Sign-In returns from Chrome through the package-restricted `hausanovels://oauth/callback` deep link.
 - The Android return activity validates the destination and reopens only `https://hausanovels.ng` inside the TWA.
 - The app header uses normal mobile-Chrome spacing without duplicated safe-area padding.
@@ -17,11 +16,11 @@ GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 ## Project settings
 
 - Package: `ng.hausanovels.app`
-- Version: `2.1.4` (`versionCode 214`)
+- Version: `2.1.3` (`versionCode 213`)
 
 ## Important GitHub update method
 
-Upload this as a clean replacement. Do not only add the new files over an old project without deleting obsolete files. Version 2.1.4 is a clean source tree. The workflow no longer deletes project files during the build. It validates the source, builds from a clean Gradle state, and reads certificate fingerprints from the APKs that were actually produced.
+Upload this as a clean replacement. Do not only add the new files over an old project without deleting obsolete files. Version 2.1.3 includes compatibility resources and automatically removes older WebView and splash files before compilation.
 - Minimum Android: API 23
 - Compile SDK: API 36
 - Target SDK: API 36
@@ -60,7 +59,7 @@ Add the SHA-256 certificate fingerprint for the build actually installed. For Pl
 
 Push the project contents to the root of a GitHub repository, then run:
 
-`Actions → Build HausaNovels TWA v2.1.4 → Run workflow`
+`Actions → Build HausaNovels TWA → Run workflow`
 
 The workflow always produces a debug APK. To create signed release APK/AAB files, configure these repository secrets:
 
