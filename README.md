@@ -1,10 +1,11 @@
-# HausaNovels Android TWA v2.1.2
+# HausaNovels Android TWA v2.1.3
 
 GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 
 ## Included fixes
 
-- Fixes the Android resource-linking failure caused by missing `app_background` and `brand_green` colour aliases.
+- Fixes the Java compilation failure caused by the missing `web_app_url` string resource.
+- The GitHub workflow removes obsolete WebView source files, including old `MainActivity.java`, before compiling.
 - Google Sign-In returns from Chrome through the package-restricted `hausanovels://oauth/callback` deep link.
 - The Android return activity validates the destination and reopens only `https://hausanovels.ng` inside the TWA.
 - The app header uses normal mobile-Chrome spacing without duplicated safe-area padding.
@@ -15,11 +16,11 @@ GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 ## Project settings
 
 - Package: `ng.hausanovels.app`
-- Version: `2.1.2` (`versionCode 212`)
+- Version: `2.1.3` (`versionCode 213`)
 
 ## Important GitHub update method
 
-Upload this as a clean replacement. Do not only add the new files over an old project without deleting obsolete files. Version 2.1.2 also includes compatibility resources so older leftover splash files can still link successfully.
+Upload this as a clean replacement. Do not only add the new files over an old project without deleting obsolete files. Version 2.1.3 includes compatibility resources and automatically removes older WebView and splash files before compilation.
 - Minimum Android: API 23
 - Compile SDK: API 36
 - Target SDK: API 36
