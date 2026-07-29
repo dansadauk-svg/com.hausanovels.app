@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/hn_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingLeft="32dp"
+    android:paddingTop="32dp"
+    android:paddingRight="32dp"
+    android:paddingBottom="32dp">
+
+    <ImageView
+        android:id="@+id/hn_splash_icon"
+        android:layout_width="132dp"
+        android:layout_height="132dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/app_name"
+        android:scaleType="fitCenter"
+        android:src="@drawable/hausanovels_splash_icon" />
+
+    <TextView
+        android:id="@+id/hn_splash_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:fontFamily="sans"
+        android:letterSpacing="0.01"
+        android:text="@string/splash_title"
+        android:textColor="@color/hn_text"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <ProgressBar
+        android:id="@+id/hn_splash_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="240dp"
+        android:layout_height="7dp"
+        android:layout_marginTop="30dp"
+        android:max="100"
+        android:progress="0"
+        android:progressDrawable="@drawable/hn_splash_progress" />
+
+    <TextView
+        android:id="@+id/hn_splash_percentage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:fontFamily="sans"
+        android:text="0%"
+        android:textColor="@color/hn_gold"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+</LinearLayout>

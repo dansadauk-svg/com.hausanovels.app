@@ -1,2 +1,1 @@
-# The release build currently keeps shrinking disabled for predictable WebView behavior.
-# Add keep rules here before enabling minification.
+# No custom native code is included. Keep this file for future rules.

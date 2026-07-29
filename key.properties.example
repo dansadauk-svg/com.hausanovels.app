@@ -1,4 +1,4 @@
 storeFile=hausanovels-release-key.jks
 storePassword=CHANGE_ME
-keyAlias=hausanovels
+keyAlias=CHANGE_ME
 keyPassword=CHANGE_ME

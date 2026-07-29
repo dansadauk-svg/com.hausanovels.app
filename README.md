@@ -1,96 +1,80 @@
-# HausaNovels Android — GitHub-ready v1.2.0
+# HausaNovels Android TWA v2.1.0
 
-Android WebView app for `https://hausanovels.ng/`.
+GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 
-## Included improvements
+## Included fixes
 
-- Android 16 / API level 36 target.
-- Professional two-stage splash experience.
-- Transparent HausaNovels logo with real page-load percentage.
-- WebView viewport and typography tuned to match mobile Chrome closely.
-- Chrome-style user agent without the old app suffix.
-- Android 16 edge-to-edge and safe-area handling.
-- Back navigation and predictive back support.
-- File upload chooser.
-- Paystack checkout inside the app.
-- Google sign-in opens securely in the phone browser and returns through the website app link.
-- GitHub Actions builds a debug APK and, when signing secrets are added, a signed APK and AAB.
+- Google Sign-In returns from Chrome through the package-restricted `hausanovels://oauth/callback` deep link.
+- The Android return activity validates the destination and reopens only `https://hausanovels.ng` inside the TWA.
+- The app header uses normal mobile-Chrome spacing without duplicated safe-area padding.
+- The adaptive launcher icon keeps all important artwork inside Android's safe zone, preventing cropping.
+- The splash screen contains only the icon, **Hausa Novels**, a progress bar, and percentage.
+- `compileSdk` and `targetSdk` are API 36.
 
-## Upload to GitHub
+## Project settings
 
-1. Create a new empty GitHub repository.
-2. Extract this ZIP.
-3. Upload the contents of this folder to the repository root.
-4. Open **Actions → Build HausaNovels Android → Run workflow**.
-5. Download the `hausanovels-android-v1.2.0` artifact.
+- Package: `ng.hausanovels.app`
+- Version: `2.1.0` (`versionCode 210`)
+- Minimum Android: API 23
+- Compile SDK: API 36
+- Target SDK: API 36
+- Java: 17
+- Start URL: `https://hausanovels.ng/?utm_source=twa&twa=1`
 
-## Release signing secrets
+## WordPress updates
 
-Add these under **GitHub repository → Settings → Secrets and variables → Actions**:
+Install the packages inside `wordpress/` before testing the new APK:
+
+1. `hausanovels-pwa-v0.1.1.zip`
+2. `hausanovels-google-signin-v0.1.3-twa-return-fix.zip`
+3. `hausanovels-dark-v0.1.45-twa-header-icon-fix.zip`
+
+The existing Wallet and Paystack packages are retained for convenience.
+
+Google Cloud must keep this exact authorized redirect URI:
+
+```text
+https://hausanovels.ng/?hn_google_callback=1
+```
+
+Do not add the `hausanovels://` URI to Google Cloud. Google returns to the HTTPS callback first; WordPress then opens the installed Android app.
+
+## Digital Asset Links
+
+The site must serve:
+
+```text
+https://hausanovels.ng/.well-known/assetlinks.json
+```
+
+Add the SHA-256 certificate fingerprint for the build actually installed. For Play Store installs, use the **Play App Signing certificate SHA-256** from Play Console. The upload-key fingerprint is different.
+
+## GitHub Actions
+
+Push the project contents to the root of a GitHub repository, then run:
+
+`Actions → Build HausaNovels TWA → Run workflow`
+
+The workflow always produces a debug APK. To create signed release APK/AAB files, configure these repository secrets:
 
 - `KEYSTORE_BASE64`
 - `KEYSTORE_PASSWORD`
 - `KEY_ALIAS`
 - `KEY_PASSWORD`
 
-Convert a keystore to base64 before saving `KEYSTORE_BASE64`:
+The build artifacts include the certificate fingerprint and an `assetlinks.json` template.
 
-```bash
-base64 -w 0 hausanovels-release-key.jks
-```
+## Testing Google return
 
-On macOS:
+1. Install the new APK.
+2. Install the WordPress updates.
+3. Add the installed build's SHA-256 fingerprint in **Hausa Books → PWA & Android TWA**.
+4. Open `https://hausanovels.ng/.well-known/assetlinks.json` and confirm it returns JSON directly with no redirect.
+5. Start Google Sign-In from the app.
+6. After Google completes, Android should return to the app Account page.
 
-```bash
-base64 hausanovels-release-key.jks | tr -d '\n'
-```
+If a browser page remains visible, tap **Return to HausaNovels** once. That button uses an explicit package-restricted Android intent and is the reliable fallback when Chrome blocks an automatic custom-scheme launch.
 
-The repository deliberately does not contain a private keystore.
+## Notes
 
-## Main configuration
-
-Website URL and in-app payment hosts:
-
-`app/src/main/res/values/strings.xml`
-
-Package name, API level and version:
-
-`app/build.gradle`
-
-Transparent splash logo:
-
-`app/src/main/res/drawable/hausanovels_logo_transparent.png`
-
-## Splash progress
-
-The Android system splash displays first. The app then shows a branded loading screen with the transparent logo, loading message, progress bar and actual WebView loading percentage. It fades out after the first page becomes ready.
-
-## Chrome-like page sizing
-
-The app fixes WebView text zoom at 100%, uses a wide device viewport, disables automatic overview zoom and removes the old `HausaNovelsApp` user-agent suffix. This prevents the website from rendering larger app-only text.
-
-Android System WebView is not the complete Chrome browser, so browser controls and the exact installed engine version can differ. Update both Chrome and Android System WebView on test phones for the closest rendering match.
-
-## Google sign-in return link
-
-The manifest supports verified links for:
-
-- `https://hausanovels.ng/...`
-- `https://www.hausanovels.ng/...`
-
-For automatic return to the app, publish a valid Digital Asset Links file at:
-
-`https://hausanovels.ng/.well-known/assetlinks.json`
-
-## Play Console
-
-This project targets Android 16:
-
-```gradle
-compileSdk 36
-targetSdk 36
-```
-
-Before every Play Console upload, increase `versionCode` in `app/build.gradle` above the version code of the previous release.
-
-See `docs/PLAY-CONSOLE.md` for release details.
+The percentage on the custom splash represents Android launch preparation. A TWA does not expose the actual website loading percentage to the wrapper.
