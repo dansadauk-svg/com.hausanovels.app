@@ -1,4 +1,4 @@
-# HausaNovels Android TWA v2.1.1
+# HausaNovels Android TWA v2.1.2
 
 GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 
@@ -15,7 +15,11 @@ GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 ## Project settings
 
 - Package: `ng.hausanovels.app`
-- Version: `2.1.1` (`versionCode 211`)
+- Version: `2.1.2` (`versionCode 212`)
+
+## Important GitHub update method
+
+Upload this as a clean replacement. Do not only add the new files over an old project without deleting obsolete files. Version 2.1.2 also includes compatibility resources so older leftover splash files can still link successfully.
 - Minimum Android: API 23
 - Compile SDK: API 36
 - Target SDK: API 36
