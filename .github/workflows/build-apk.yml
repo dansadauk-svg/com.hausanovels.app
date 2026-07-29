@@ -1,4 +1,4 @@
-name: Build HausaNovels TWA v2.1.1
+name: Build HausaNovels TWA v2.1.2
 
 on:
   workflow_dispatch:
@@ -43,6 +43,10 @@ jobs:
         with:
           gradle-version: '8.13'
           cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Verify Android compatibility resources
+        shell: bash
+        run: python3 tools/verify_android_resources.py
 
       - name: Build debug APK
         run: gradle --no-daemon --stacktrace assembleDebug
@@ -132,7 +136,7 @@ jobs:
       - name: Upload debug build
         uses: actions/upload-artifact@v4
         with:
-          name: hausanovels-twa-v2.1.1-debug
+          name: hausanovels-twa-v2.1.2-debug
           if-no-files-found: error
           retention-days: 14
           path: |
@@ -144,7 +148,7 @@ jobs:
         if: steps.signing.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: hausanovels-twa-v2.1.1-release
+          name: hausanovels-twa-v2.1.2-release
           if-no-files-found: error
           retention-days: 30
           path: |
