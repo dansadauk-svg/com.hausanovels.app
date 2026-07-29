@@ -44,6 +44,10 @@ jobs:
           gradle-version: '8.13'
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
+      - name: Remove legacy files left by previous repository uploads
+        shell: bash
+        run: python3 tools/prepare_clean_source.py
+
       - name: Validate repaired v2.1.4 source
         shell: bash
         run: python3 tools/verify_android_resources.py
