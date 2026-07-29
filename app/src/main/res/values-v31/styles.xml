@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.HausaNovels.TWA" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@color/hn_background</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">@color/hn_green</item>
+        <item name="android:statusBarColor">@color/hn_background</item>
+        <item name="android:navigationBarColor">@color/hn_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+
+    <style name="Theme.HausaNovels.Splash" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@color/hn_background</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:statusBarColor">@color/hn_background</item>
+        <item name="android:navigationBarColor">@color/hn_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowSplashScreenBackground">@color/hn_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/hausanovels_splash_icon</item>
+        <item name="android:windowSplashScreenAnimationDuration">120</item>
+    </style>
+
+    <style name="Theme.HausaNovels.OAuthReturn" parent="android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+</resources>

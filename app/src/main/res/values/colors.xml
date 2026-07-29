@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="hn_background">#050816</color>
+    <color name="hn_green">#21C77A</color>
+    <color name="hn_gold">#F3B348</color>
+    <color name="hn_text">#F8FAFC</color>
+</resources>
