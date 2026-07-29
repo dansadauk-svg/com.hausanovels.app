@@ -7,23 +7,22 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.Window;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-/**
- * Minimal branded launch screen shown only when the user taps the app icon.
- * The percentage represents app launch preparation, not network page-load progress.
- */
+/** Minimal branded launch screen shown only when the app icon is tapped. */
 public final class SplashActivity extends Activity {
+    private static final String TAG = "HausaNovelsSplash";
     private static final String DEFAULT_URL = "https://hausanovels.ng/?utm_source=twa&twa=1";
     private static final long TICK_MS = 22L;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ProgressBar progressBar;
     private TextView progressText;
-    private int progress = 0;
-    private boolean launched = false;
+    private int progress;
+    private boolean launched;
 
     private final Runnable progressTask = new Runnable() {
         @Override
@@ -67,8 +66,12 @@ public final class SplashActivity extends Activity {
     }
 
     private void updateProgress() {
-        progressBar.setProgress(progress);
-        progressText.setText(progress + "%");
+        if (progressBar != null) {
+            progressBar.setProgress(progress);
+        }
+        if (progressText != null) {
+            progressText.setText(progress + "%");
+        }
     }
 
     private void launchTwa() {
@@ -81,17 +84,30 @@ public final class SplashActivity extends Activity {
         Intent intent = new Intent(this, HausaNovelsLauncherActivity.class);
         intent.setAction(Intent.ACTION_VIEW);
         intent.setData(launchUri);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        startActivity(intent);
+        intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP
+        );
+
+        try {
+            startActivity(intent);
+        } catch (RuntimeException error) {
+            Log.e(TAG, "Unable to start the Trusted Web Activity", error);
+            BrowserFallback.open(this, launchUri);
+        }
+
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
         finish();
     }
 
     private static Uri safeWebUri(Uri candidate) {
-        if (candidate != null
-                && "https".equalsIgnoreCase(candidate.getScheme())
-                && "hausanovels.ng".equalsIgnoreCase(candidate.getHost())) {
-            return candidate;
+        if (candidate != null && "https".equalsIgnoreCase(candidate.getScheme())) {
+            String host = candidate.getHost();
+            if ("hausanovels.ng".equalsIgnoreCase(host)
+                    || "www.hausanovels.ng".equalsIgnoreCase(host)) {
+                return candidate;
+            }
         }
         return Uri.parse(DEFAULT_URL);
     }

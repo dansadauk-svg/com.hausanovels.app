@@ -4,12 +4,11 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 
-/**
- * Receives the package-restricted OAuth return deep link after Google completes sign-in in Chrome.
- * The WordPress authentication cookie already exists in Chrome's cookie jar, which is shared by TWA.
- */
+/** Receives the Google sign-in return and reopens the authenticated browser/TWA session. */
 public final class OAuthReturnActivity extends Activity {
+    private static final String TAG = "HausaNovelsOAuth";
     private static final Uri DEFAULT_ACCOUNT_URL =
             Uri.parse("https://hausanovels.ng/account/?google_login=success&twa=1");
 
@@ -31,8 +30,18 @@ public final class OAuthReturnActivity extends Activity {
         Intent launch = new Intent(this, HausaNovelsLauncherActivity.class);
         launch.setAction(Intent.ACTION_VIEW);
         launch.setData(target);
-        launch.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        startActivity(launch);
+        launch.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP
+        );
+
+        try {
+            startActivity(launch);
+        } catch (RuntimeException error) {
+            Log.e(TAG, "Unable to return to the Trusted Web Activity", error);
+            BrowserFallback.open(this, target);
+        }
         finish();
     }
 
@@ -52,7 +61,8 @@ public final class OAuthReturnActivity extends Activity {
         }
 
         String host = parsed.getHost();
-        if (host == null || !"hausanovels.ng".equalsIgnoreCase(host)) {
+        if (!"hausanovels.ng".equalsIgnoreCase(host)
+                && !"www.hausanovels.ng".equalsIgnoreCase(host)) {
             return DEFAULT_ACCOUNT_URL;
         }
 

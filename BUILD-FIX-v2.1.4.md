@@ -1,15 +1,25 @@
-# Build fix v2.1.4
+# HausaNovels TWA v2.1.4 — Runtime repair
 
-The prior workflow tried to read `$HOME/.android/debug.keystore` directly. That path is not guaranteed to exist in every GitHub runner configuration, even when a debug APK was produced.
+This is the repaired v2.1.4 source. It keeps:
 
-Version 2.1.4 permanently removes that dependency:
+- package/application ID `ng.hausanovels.app`
+- version code `214`
+- version name `2.1.4`
+- existing GitHub signing secret names
 
-- The debug certificate fingerprint is read from the built APK with Android `apksigner`.
-- The release fingerprint is also read from the actual signed release APK.
-- The workflow starts with `clean assembleDebug`.
-- No Android source or resource files are deleted during the build.
-- A validator rejects stale WebView files and unresolved local resources before Gradle runs.
-- The package remains `ng.hausanovels.app`.
-- Release builds still use the existing GitHub secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`.
+Runtime changes:
 
-To avoid mixing old and new source files, delete the old repository contents except GitHub Secrets, then upload the contents of this folder.
+- The splash launches the TWA with `FLAG_ACTIVITY_NEW_TASK`, matching Android Browser Helper's launcher flow.
+- The TWA launcher no longer uses `singleTask`, avoiding the trampoline/relaunch conflict.
+- TWA launch exceptions fall back to an external browser instead of terminating the app.
+- Browser fallback explicitly excludes `ng.hausanovels.app`, preventing a recursive App Link loop.
+- The unused FileProvider and splash-transfer metadata were removed because this project uses its own native splash screen.
+- Google OAuth return uses the same crash-safe launch path.
+- Both `hausanovels.ng` and `www.hausanovels.ng` are accepted.
+
+The GitHub workflow still reads release signing from:
+
+- `KEYSTORE_BASE64`
+- `KEYSTORE_PASSWORD`
+- `KEY_ALIAS`
+- `KEY_PASSWORD`

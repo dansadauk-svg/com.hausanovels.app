@@ -27,19 +27,10 @@
             android:name="asset_statements"
             android:resource="@string/asset_statements" />
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="ng.hausanovels.app.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/filepaths" />
-        </provider>
-
         <activity
             android:name=".SplashActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.HausaNovels.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -51,7 +42,6 @@
             android:name=".HausaNovelsLauncherActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="true"
-            android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:theme="@style/Theme.HausaNovels.TWA">
 
@@ -65,9 +55,6 @@
                 android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
                 android:resource="@color/hn_background" />
             <meta-data
-                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
-                android:value="ng.hausanovels.app.fileprovider" />
-            <meta-data
                 android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
                 android:value="customtabs" />
 
@@ -76,6 +63,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="hausanovels.ng" />
+                <data android:scheme="https" android:host="www.hausanovels.ng" />
             </intent-filter>
         </activity>
 
