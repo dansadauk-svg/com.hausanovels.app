@@ -1,25 +1,33 @@
-# HausaNovels TWA v2.1.4 — Runtime repair
+# HausaNovels TWA v2.1.4 — repository cleanup and runtime repair
 
-This is the repaired v2.1.4 source. It keeps:
+Package identity remains unchanged:
 
-- package/application ID `ng.hausanovels.app`
-- version code `214`
-- version name `2.1.4`
-- existing GitHub signing secret names
+- Application ID: `ng.hausanovels.app`
+- Version name: `2.1.4`
+- Version code: `214`
 
-Runtime changes:
+## Permanent repository cleanup
 
-- The splash launches the TWA with `FLAG_ACTIVITY_NEW_TASK`, matching Android Browser Helper's launcher flow.
-- The TWA launcher no longer uses `singleTask`, avoiding the trampoline/relaunch conflict.
-- TWA launch exceptions fall back to an external browser instead of terminating the app.
-- Browser fallback explicitly excludes `ng.hausanovels.app`, preventing a recursive App Link loop.
-- The unused FileProvider and splash-transfer metadata were removed because this project uses its own native splash screen.
-- Google OAuth return uses the same crash-safe launch path.
-- Both `hausanovels.ng` and `www.hausanovels.ng` are accepted.
+GitHub's browser uploader overwrites matching paths, but it does not delete old files
+that are absent from a replacement ZIP. Older HausaNovels files such as
+`res/xml/filepaths.xml`, `MainActivity.java`, and obsolete splash drawables can therefore
+remain and break a newer build.
 
-The GitHub workflow still reads release signing from:
+This package fixes that in two places:
 
-- `KEYSTORE_BASE64`
-- `KEYSTORE_PASSWORD`
-- `KEY_ALIAS`
-- `KEY_PASSWORD`
+1. GitHub Actions runs `tools/prepare_clean_source.py` before source validation.
+2. Gradle runs `purgeLegacyHausaNovelsSources` before every local or CI `preBuild`.
+
+The cleanup is idempotent: it succeeds whether the obsolete files exist or not.
+
+## Current source set
+
+The current app uses only:
+
+- `SplashActivity`
+- `HausaNovelsLauncherActivity`
+- `OAuthReturnActivity`
+- `BrowserFallback`
+- the minimal `activity_splash.xml` splash screen
+
+No FileProvider is required, so `res/xml/filepaths.xml` must not participate in the build.

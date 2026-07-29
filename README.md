@@ -89,3 +89,10 @@ The percentage on the custom splash represents Android launch preparation. A TWA
 ## v2.1.4 runtime repair
 
 This package keeps `ng.hausanovels.app` and the original v2.1.4 version identifiers. Replace the repository contents with this clean source while preserving the repository's GitHub Actions secrets. The launcher now has a safe external-browser fallback and cannot route that fallback back into the HausaNovels app.
+
+## Legacy-file-safe builds
+
+This v2.1.4 package automatically removes obsolete files left by older GitHub uploads
+before validation and before Gradle's `preBuild`. You no longer need to manually delete
+`app/src/main/res/xml/filepaths.xml` or the old WebView/splash resources for the workflow
+to succeed.
