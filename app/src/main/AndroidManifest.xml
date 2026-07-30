@@ -50,10 +50,10 @@
                 android:value="https://hausanovels.ng/?utm_source=twa&amp;twa=1" />
             <meta-data
                 android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-                android:resource="@color/hn_background" />
+                android:resource="@color/hn_transition_background" />
             <meta-data
                 android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
-                android:resource="@color/hn_background" />
+                android:resource="@color/hn_transition_background" />
             <meta-data
                 android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
                 android:value="customtabs" />

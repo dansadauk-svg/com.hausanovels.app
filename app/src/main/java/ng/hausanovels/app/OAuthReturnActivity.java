@@ -2,6 +2,8 @@ package ng.hausanovels.app;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,6 +16,9 @@ public final class OAuthReturnActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        getWindow().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#FFF8EF")));
+        getWindow().setStatusBarColor(Color.parseColor("#FFF8EF"));
+        getWindow().setNavigationBarColor(Color.parseColor("#FFF8EF"));
         super.onCreate(savedInstanceState);
         reopenTwa();
     }

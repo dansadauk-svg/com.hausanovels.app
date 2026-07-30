@@ -1,6 +1,8 @@
 package ng.hausanovels.app;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -18,12 +20,19 @@ public final class HausaNovelsLauncherActivity
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        applyLightTransitionBackground();
         try {
             super.onCreate(savedInstanceState);
         } catch (RuntimeException error) {
             Log.e(TAG, "Trusted Web Activity launch failed", error);
             openFallback(resolveUrl(getIntent()));
         }
+    }
+
+    private void applyLightTransitionBackground() {
+        getWindow().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#FFF8EF")));
+        getWindow().setStatusBarColor(Color.parseColor("#FFF8EF"));
+        getWindow().setNavigationBarColor(Color.parseColor("#FFF8EF"));
     }
 
     @Override
