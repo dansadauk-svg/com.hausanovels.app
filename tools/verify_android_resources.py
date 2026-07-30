@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the repaired HausaNovels v2.1.4 source before Gradle starts."""
+"""Validate HausaNovels v2.1.4 seamless WebView source before Gradle starts."""
 from pathlib import Path
 import re
 import sys
@@ -14,21 +14,28 @@ APP_GRADLE = ROOT / "app" / "build.gradle"
 
 EXPECTED_PACKAGE = "ng.hausanovels.app"
 EXPECTED_JAVA = {
+    "ng/hausanovels/app/SplashActivity.java",
+}
+FORBIDDEN_JAVA = {
     "ng/hausanovels/app/BrowserFallback.java",
     "ng/hausanovels/app/HausaNovelsLauncherActivity.java",
     "ng/hausanovels/app/OAuthReturnActivity.java",
-    "ng/hausanovels/app/SplashActivity.java",
+    "ng/hausanovels/app/MainActivity.java",
+    "com/hausanovels/app/MainActivity.java",
 }
 
 errors: list[str] = []
 
 actual_java = {p.relative_to(JAVA).as_posix() for p in JAVA.rglob("*.java")}
-extra_java = sorted(actual_java - EXPECTED_JAVA)
 missing_java = sorted(EXPECTED_JAVA - actual_java)
-if extra_java:
-    errors.append("Obsolete or unexpected Java files: " + ", ".join(extra_java))
+forbidden_java = sorted(actual_java & FORBIDDEN_JAVA)
+extra_java = sorted(actual_java - EXPECTED_JAVA - FORBIDDEN_JAVA)
 if missing_java:
     errors.append("Missing required Java files: " + ", ".join(missing_java))
+if forbidden_java:
+    errors.append("Legacy Java files must be deleted: " + ", ".join(forbidden_java))
+if extra_java:
+    errors.append("Unexpected Java files: " + ", ".join(extra_java))
 
 for java_path in sorted(EXPECTED_JAVA):
     source = JAVA / java_path
@@ -44,6 +51,9 @@ for required in (
 ):
     if required not in app_gradle_text:
         errors.append(f"Missing Gradle setting: {required}")
+
+if "androidbrowserhelper" in app_gradle_text:
+    errors.append("TWA androidbrowserhelper dependency must not be present in the seamless WebView build")
 
 # Resource definitions from values XML and file-based resource directories.
 definitions: dict[str, set[str]] = {}
@@ -92,7 +102,6 @@ for resource_type, name, source in sorted(refs):
     if name not in definitions.get(resource_type, set()):
         errors.append(f"Missing @{resource_type}/{name}, referenced by {source}")
 
-# Manifest checks that prevent the previous runtime loop/crash configuration.
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 try:
     manifest_root = ET.parse(MANIFEST).getroot()
@@ -100,18 +109,20 @@ try:
     if application is None:
         errors.append("AndroidManifest.xml has no <application> element")
     else:
-        activities = {
-            node.attrib.get(ANDROID + "name"): node
-            for node in application.findall("activity")
-        }
-        launcher = activities.get(".HausaNovelsLauncherActivity")
+        activities = {node.attrib.get(ANDROID + "name"): node for node in application.findall("activity")}
+        launcher = activities.get(".SplashActivity")
         if launcher is None:
-            errors.append("TWA launcher activity is missing")
-        elif launcher.attrib.get(ANDROID + "launchMode") == "singleTask":
-            errors.append("TWA launcher must not use singleTask with the custom splash trampoline")
+            errors.append("SplashActivity/WebView launcher activity is missing")
+        else:
+            if launcher.attrib.get(ANDROID + "launchMode") != "singleTask":
+                errors.append("SplashActivity must use singleTask so Google return links reuse the existing WebView")
+        if ".HausaNovelsLauncherActivity" in activities:
+            errors.append("TWA launcher activity must not be present in the seamless WebView build")
+        if ".OAuthReturnActivity" in activities:
+            errors.append("Separate OAuthReturnActivity must not be present; SplashActivity handles app returns")
         providers = application.findall("provider")
         if providers:
-            errors.append("Unused FileProvider must not be present; this build uses a native splash activity")
+            errors.append("Unused FileProvider must not be present")
 except ET.ParseError as exc:
     errors.append(f"Invalid AndroidManifest.xml: {exc}")
 
@@ -121,11 +132,13 @@ for stale in (
     RES / "drawable" / "splash_screen.xml",
     RES / "xml" / "filepaths.xml",
     JAVA / "ng" / "hausanovels" / "app" / "MainActivity.java",
+    JAVA / "ng" / "hausanovels" / "app" / "HausaNovelsLauncherActivity.java",
+    JAVA / "ng" / "hausanovels" / "app" / "BrowserFallback.java",
+    JAVA / "ng" / "hausanovels" / "app" / "OAuthReturnActivity.java",
 ):
     if stale.exists():
         errors.append(f"Stale file must be deleted: {stale.relative_to(ROOT)}")
 
-# Prevent accidental package drift.
 for file in ROOT.rglob("*"):
     if not file.is_file() or any(part in {".git", "build"} for part in file.parts):
         continue
@@ -140,4 +153,4 @@ if errors:
         print(error, file=sys.stderr)
     raise SystemExit(1)
 
-print("HausaNovels v2.1.4 package, manifest and Android resources verified.")
+print("HausaNovels v2.1.4 seamless WebView package, manifest and Android resources verified.")

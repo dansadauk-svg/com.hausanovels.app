@@ -96,3 +96,8 @@ This v2.1.4 package automatically removes obsolete files left by older GitHub up
 before validation and before Gradle's `preBuild`. You no longer need to manually delete
 `app/src/main/res/xml/filepaths.xml` or the old WebView/splash resources for the workflow
 to succeed.
+
+
+## v2.1.4 Seamless WebView Fix
+
+This build replaces the visible TWA browser hand-off with a native WebView shell. The package name, version name, version code and signing secret names remain unchanged. The splash overlay stays in the same Activity and disappears only after the first HausaNovels page is visible. Google Sign-In still opens in the secure system browser and returns through the existing `hausanovels://oauth/callback` app bridge.

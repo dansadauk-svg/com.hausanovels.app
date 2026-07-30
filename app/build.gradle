@@ -60,7 +60,6 @@ android {
 }
 
 dependencies {
-    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.7.2"
 }
 
 // Safety net for repositories that were updated through GitHub's browser uploader.
@@ -68,7 +67,11 @@ dependencies {
 // so remove known legacy WebView/splash resources before every Android build.
 def legacySourceFiles = [
         "src/main/java/ng/hausanovels/app/MainActivity.java",
+        "src/main/java/ng/hausanovels/app/HausaNovelsLauncherActivity.java",
+        "src/main/java/ng/hausanovels/app/BrowserFallback.java",
+        "src/main/java/ng/hausanovels/app/OAuthReturnActivity.java",
         "src/main/java/com/hausanovels/app/MainActivity.java",
+        "src/main/java/com/hausanovels/app/HausaNovelsLauncherActivity.java",
         "src/main/res/layout/activity_main.xml",
         "src/main/res/drawable/progress_fill.xml",
         "src/main/res/drawable/progress_track.xml",
@@ -78,7 +81,6 @@ def legacySourceFiles = [
         "src/main/res/xml/filepaths.xml",
         "src/main/res/xml/provider_paths.xml"
 ]
-
 tasks.register("purgeLegacyHausaNovelsSources", Delete) {
     delete legacySourceFiles.collect { file(it) }
 }

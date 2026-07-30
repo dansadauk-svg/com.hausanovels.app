@@ -2,6 +2,10 @@
 <resources>
     <string name="app_name">HausaNovels</string>
     <string name="splash_title">Hausa Novels</string>
-    <string name="no_browser_available">No compatible browser is available to open HausaNovels.</string>
+    <string name="loading_preparing">Preparing your reading space…</string>
+    <string name="error_title">Unable to load HausaNovels</string>
+    <string name="error_message">Please check your internet connection and try again.</string>
+    <string name="retry">Try Again</string>
+    <string name="no_browser_available">No compatible browser is available to complete this action.</string>
     <string name="asset_statements" translatable="false">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://hausanovels.ng\"}}]</string>
 </resources>

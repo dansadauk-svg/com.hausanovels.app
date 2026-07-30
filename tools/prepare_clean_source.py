@@ -2,8 +2,8 @@
 """Remove obsolete files left by older HausaNovels WebView/TWA uploads.
 
 GitHub's browser uploader replaces files that share the same path but does not delete
-files that are absent from a newer ZIP. This normalizer makes the v2.1.4 build
-repeatable even when legacy source files are still present in the repository.
+files that are absent from a newer ZIP. This normalizer keeps the v2.1.4 seamless
+WebView build repeatable even when previous TWA files remain in the repository.
 """
 from pathlib import Path
 
@@ -12,7 +12,11 @@ MAIN = ROOT / "app" / "src" / "main"
 
 LEGACY_PATHS = (
     MAIN / "java" / "ng" / "hausanovels" / "app" / "MainActivity.java",
+    MAIN / "java" / "ng" / "hausanovels" / "app" / "HausaNovelsLauncherActivity.java",
+    MAIN / "java" / "ng" / "hausanovels" / "app" / "BrowserFallback.java",
+    MAIN / "java" / "ng" / "hausanovels" / "app" / "OAuthReturnActivity.java",
     MAIN / "java" / "com" / "hausanovels" / "app" / "MainActivity.java",
+    MAIN / "java" / "com" / "hausanovels" / "app" / "HausaNovelsLauncherActivity.java",
     MAIN / "res" / "layout" / "activity_main.xml",
     MAIN / "res" / "drawable" / "progress_fill.xml",
     MAIN / "res" / "drawable" / "progress_track.xml",
@@ -29,7 +33,6 @@ for path in LEGACY_PATHS:
         path.unlink()
         removed.append(path.relative_to(ROOT).as_posix())
 
-# Remove empty legacy directories, deepest first. Never remove current source folders.
 protected = {
     MAIN,
     MAIN / "java",
