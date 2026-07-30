@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate HausaNovels v2.1.4 seamless WebView source before Gradle starts."""
+"""Validate HausaNovels v2.1.6 seamless WebView source before Gradle starts."""
 from pathlib import Path
 import re
 import sys
@@ -46,8 +46,8 @@ app_gradle_text = APP_GRADLE.read_text(errors="replace")
 for required in (
     f'namespace "{EXPECTED_PACKAGE}"',
     f'applicationId "{EXPECTED_PACKAGE}"',
-    'versionCode 214',
-    'versionName "2.1.4"',
+    'versionCode 216',
+    'versionName "2.1.6"',
 ):
     if required not in app_gradle_text:
         errors.append(f"Missing Gradle setting: {required}")
@@ -153,4 +153,4 @@ if errors:
         print(error, file=sys.stderr)
     raise SystemExit(1)
 
-print("HausaNovels v2.1.4 seamless WebView package, manifest and Android resources verified.")
+print("HausaNovels v2.1.6 seamless WebView package, manifest and Android resources verified.")

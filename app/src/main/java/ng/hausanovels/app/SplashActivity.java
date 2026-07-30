@@ -37,7 +37,7 @@ import android.widget.TextView;
 public final class SplashActivity extends Activity {
     private static final String TAG = "HausaNovelsApp";
     private static final String HOME_URL = "https://hausanovels.ng/?utm_source=android&app=1";
-    private static final String APP_USER_AGENT = "HausaNovelsApp/2.1.4";
+    private static final String APP_USER_AGENT = "HausaNovelsApp/2.1.6";
     private static final long MIN_SPLASH_MS = 1600L;
     private static final long HIDE_DELAY_MS = 180L;
 

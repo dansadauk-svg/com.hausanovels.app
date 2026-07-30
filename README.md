@@ -1,4 +1,4 @@
-# HausaNovels Android TWA v2.1.4
+# HausaNovels Android TWA v2.1.6
 
 GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 
@@ -17,11 +17,11 @@ GitHub-ready Trusted Web Activity for `https://hausanovels.ng`.
 ## Project settings
 
 - Package: `ng.hausanovels.app`
-- Version: `2.1.4` (`versionCode 214`)
+- Version: `2.1.6` (`versionCode 216`)
 
 ## Important GitHub update method
 
-Upload this as a clean replacement. Do not only add the new files over an old project without deleting obsolete files. Version 2.1.4 is a clean source tree. The workflow no longer deletes project files during the build. It validates the source, builds from a clean Gradle state, and reads certificate fingerprints from the APKs that were actually produced.
+Upload this as a clean replacement. Do not only add the new files over an old project without deleting obsolete files. Version 2.1.6 is a clean source tree. The workflow no longer deletes project files during the build. It validates the source, builds from a clean Gradle state, and reads certificate fingerprints from the APKs that were actually produced.
 - Minimum Android: API 23
 - Compile SDK: API 36
 - Target SDK: API 36
@@ -60,7 +60,7 @@ Add the SHA-256 certificate fingerprint for the build actually installed. For Pl
 
 Push the project contents to the root of a GitHub repository, then run:
 
-`Actions → Build HausaNovels TWA v2.1.4 → Run workflow`
+`Actions → Build HausaNovels TWA v2.1.6 → Run workflow`
 
 The workflow always produces a debug APK. To create signed release APK/AAB files, configure these repository secrets:
 
@@ -86,18 +86,18 @@ If a browser page remains visible, tap **Return to HausaNovels** once. That butt
 
 The percentage on the custom splash represents Android launch preparation. A TWA does not expose the actual website loading percentage to the wrapper.
 
-## v2.1.4 runtime repair
+## v2.1.6 runtime repair
 
-This package keeps `ng.hausanovels.app` and the original v2.1.4 version identifiers. Replace the repository contents with this clean source while preserving the repository's GitHub Actions secrets. The launcher now has a safe external-browser fallback and cannot route that fallback back into the HausaNovels app.
+This package keeps `ng.hausanovels.app` and the original v2.1.6 version identifiers. Replace the repository contents with this clean source while preserving the repository's GitHub Actions secrets. The launcher now has a safe external-browser fallback and cannot route that fallback back into the HausaNovels app.
 
 ## Legacy-file-safe builds
 
-This v2.1.4 package automatically removes obsolete files left by older GitHub uploads
+This v2.1.6 package automatically removes obsolete files left by older GitHub uploads
 before validation and before Gradle's `preBuild`. You no longer need to manually delete
 `app/src/main/res/xml/filepaths.xml` or the old WebView/splash resources for the workflow
 to succeed.
 
 
-## v2.1.4 Seamless WebView Fix
+## v2.1.6 Seamless WebView Fix
 
 This build replaces the visible TWA browser hand-off with a native WebView shell. The package name, version name, version code and signing secret names remain unchanged. The splash overlay stays in the same Activity and disappears only after the first HausaNovels page is visible. Google Sign-In still opens in the secure system browser and returns through the existing `hausanovels://oauth/callback` app bridge.

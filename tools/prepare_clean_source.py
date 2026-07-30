@@ -2,7 +2,7 @@
 """Remove obsolete files left by older HausaNovels WebView/TWA uploads.
 
 GitHub's browser uploader replaces files that share the same path but does not delete
-files that are absent from a newer ZIP. This normalizer keeps the v2.1.4 seamless
+files that are absent from a newer ZIP. This normalizer keeps the v2.1.6 seamless
 WebView build repeatable even when previous TWA files remain in the repository.
 """
 from pathlib import Path
