@@ -1,4 +1,4 @@
-name: Build HausaNovels TWA v2.1.4
+name: Build HausaNovels WebView v2.1.7
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: twa-build-${{ github.ref }}
+  group: webview-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: python3 tools/prepare_clean_source.py
 
-      - name: Validate repaired v2.1.4 source
+      - name: Validate seamless v2.1.7 source
         shell: bash
         run: python3 tools/verify_android_resources.py
 
@@ -190,7 +190,7 @@ jobs:
       - name: Upload debug build
         uses: actions/upload-artifact@v4
         with:
-          name: hausanovels-twa-v2.1.4-debug
+          name: hausanovels-webview-v2.1.7-debug
           if-no-files-found: error
           retention-days: 14
           path: |
@@ -202,7 +202,7 @@ jobs:
         if: steps.signing.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: hausanovels-twa-v2.1.4-release
+          name: hausanovels-webview-v2.1.7-release
           if-no-files-found: error
           retention-days: 30
           path: |
