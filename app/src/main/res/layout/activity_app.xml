@@ -5,11 +5,17 @@
     android:layout_height="match_parent"
     android:background="@color/hn_background">
 
-    <WebView
-        android:id="@+id/hn_webview"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/hn_swipe_refresh"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/hn_transition_background" />
+        android:layout_height="match_parent">
+
+        <WebView
+            android:id="@+id/hn_webview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/hn_transition_background" />
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <LinearLayout
         android:id="@+id/hn_splash_overlay"

@@ -18,8 +18,8 @@ android {
         applicationId "ng.hausanovels.app"
         minSdk 23
         targetSdk 36
-        versionCode 216
-        versionName "2.1.6"
+        versionCode 217
+        versionName "2.1.7"
     }
 
     signingConfigs {
@@ -60,6 +60,7 @@ android {
 }
 
 dependencies {
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
 }
 
 // Safety net for repositories that were updated through GitHub's browser uploader.

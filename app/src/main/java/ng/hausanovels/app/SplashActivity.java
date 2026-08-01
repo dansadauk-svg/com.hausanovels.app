@@ -12,10 +12,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.webkit.CookieManager;
 import android.webkit.SslErrorHandler;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -25,33 +27,39 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 /**
  * Seamless HausaNovels launcher.
  *
- * The older TWA build hands the user from this app to Chrome. That hand-off can show a
- * blank page, a Custom Tab browser bar, or a browser error before the site finishes painting.
- * This build keeps the splash overlay and the WebView in the same Activity, hides the splash
- * only after the first HausaNovels page is visible, and uses the secure system browser only for
- * Google OAuth or other external websites.
+ * This WebView shell keeps the splash overlay and website inside the same Activity, supports
+ * publisher image uploads, lets readers pull down to refresh, and handles back navigation with
+ * both the Android back button and a left-edge swipe gesture.
  */
 public final class SplashActivity extends Activity {
     private static final String TAG = "HausaNovelsApp";
     private static final String HOME_URL = "https://hausanovels.ng/?utm_source=android&app=1";
-    private static final String APP_USER_AGENT = "HausaNovelsApp/2.1.6";
+    private static final String APP_USER_AGENT = "HausaNovelsApp/2.1.7";
+    private static final int FILE_CHOOSER_REQUEST_CODE = 7001;
     private static final long MIN_SPLASH_MS = 1600L;
     private static final long HIDE_DELAY_MS = 180L;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private WebView webView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private View splashOverlay;
     private View errorPanel;
     private ProgressBar progressBar;
     private TextView progressText;
     private TextView statusText;
+    private ValueCallback<Uri[]> filePathCallback;
     private long splashStartedAt;
     private boolean firstPageVisible;
     private boolean errorVisible;
+    private float touchStartX;
+    private float touchStartY;
+    private long touchStartTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +68,7 @@ public final class SplashActivity extends Activity {
         applyWindowColors();
         setContentView(R.layout.activity_app);
 
+        swipeRefreshLayout = findViewById(R.id.hn_swipe_refresh);
         webView = findViewById(R.id.hn_webview);
         splashOverlay = findViewById(R.id.hn_splash_overlay);
         errorPanel = findViewById(R.id.hn_error_panel);
@@ -68,6 +77,7 @@ public final class SplashActivity extends Activity {
         statusText = findViewById(R.id.hn_splash_status);
         findViewById(R.id.hn_retry_button).setOnClickListener(view -> reloadHome());
 
+        configureSwipeRefresh();
         configureWebView();
         loadInitialIntent(getIntent());
     }
@@ -80,8 +90,26 @@ public final class SplashActivity extends Activity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+            ValueCallback<Uri[]> callback = filePathCallback;
+            filePathCallback = null;
+            if (callback != null) {
+                Uri[] result = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                callback.onReceiveValue(result);
+            }
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
+        if (filePathCallback != null) {
+            filePathCallback.onReceiveValue(null);
+            filePathCallback = null;
+        }
         if (webView != null) {
             webView.stopLoading();
             webView.destroy();
@@ -101,17 +129,34 @@ public final class SplashActivity extends Activity {
 
     private void applyWindowColors() {
         Window window = getWindow();
-        window.setBackgroundDrawable(new ColorDrawable(Color.parseColor("#050816")));
-        window.setStatusBarColor(Color.parseColor("#050816"));
-        window.setNavigationBarColor(Color.parseColor("#050816"));
+        window.setBackgroundDrawable(new ColorDrawable(Color.parseColor("#FFF8EF")));
+        window.setStatusBarColor(Color.parseColor("#FFF8EF"));
+        window.setNavigationBarColor(Color.parseColor("#FFF8EF"));
     }
 
-    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+    private void configureSwipeRefresh() {
+        if (swipeRefreshLayout == null) {
+            return;
+        }
+        swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#0F7B45"), Color.parseColor("#D79D2A"));
+        swipeRefreshLayout.setProgressBackgroundColorSchemeColor(Color.parseColor("#FFF8EF"));
+        swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> webView != null && webView.getScrollY() > 0);
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            if (webView != null) {
+                webView.reload();
+            } else {
+                swipeRefreshLayout.setRefreshing(false);
+            }
+        });
+    }
+
+    @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
     private void configureWebView() {
         webView.setBackgroundColor(Color.parseColor("#FFF8EF"));
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        webView.setOnTouchListener(this::handleSwipeBackGesture);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -126,6 +171,8 @@ public final class SplashActivity extends Activity {
         settings.setTextZoom(100);
         settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
         String currentUa = settings.getUserAgentString();
         if (currentUa == null || !currentUa.contains(APP_USER_AGENT)) {
             settings.setUserAgentString((currentUa == null ? "" : currentUa) + " " + APP_USER_AGENT);
@@ -142,7 +189,50 @@ public final class SplashActivity extends Activity {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 updateProgress(newProgress);
+                if (newProgress >= 100 && swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
                 super.onProgressChanged(view, newProgress);
+            }
+
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePath, FileChooserParams fileChooserParams) {
+                if (filePathCallback != null) {
+                    filePathCallback.onReceiveValue(null);
+                }
+                filePathCallback = filePath;
+
+                Intent chooserIntent;
+                try {
+                    chooserIntent = fileChooserParams != null ? fileChooserParams.createIntent() : null;
+                } catch (Exception ignored) {
+                    chooserIntent = null;
+                }
+
+                if (chooserIntent == null) {
+                    chooserIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                    chooserIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                    chooserIntent.setType("image/*");
+                    chooserIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false);
+                }
+
+                try {
+                    startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST_CODE);
+                    return true;
+                } catch (ActivityNotFoundException error) {
+                    Intent fallback = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                    fallback.setType("image/*");
+                    try {
+                        startActivityForResult(fallback, FILE_CHOOSER_REQUEST_CODE);
+                        return true;
+                    } catch (ActivityNotFoundException fallbackError) {
+                        if (filePathCallback != null) {
+                            filePathCallback.onReceiveValue(null);
+                            filePathCallback = null;
+                        }
+                        return false;
+                    }
+                }
             }
         });
 
@@ -165,12 +255,18 @@ public final class SplashActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
                 markPageVisible();
                 super.onPageFinished(view, url);
             }
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
                 if (request != null && request.isForMainFrame()) {
                     showError();
                 }
@@ -182,9 +278,44 @@ public final class SplashActivity extends Activity {
                 if (handler != null) {
                     handler.cancel();
                 }
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
                 showError();
             }
         });
+    }
+
+    private boolean handleSwipeBackGesture(View view, MotionEvent event) {
+        if (event == null || webView == null) {
+            return false;
+        }
+
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                touchStartX = event.getX();
+                touchStartY = event.getY();
+                touchStartTime = System.currentTimeMillis();
+                return false;
+            case MotionEvent.ACTION_UP:
+                float dx = event.getX() - touchStartX;
+                float dy = Math.abs(event.getY() - touchStartY);
+                long elapsed = System.currentTimeMillis() - touchStartTime;
+                float edgeWidth = dpToPx(42f);
+                float triggerDistance = dpToPx(92f);
+                float maxVerticalMove = dpToPx(80f);
+                if (touchStartX <= edgeWidth && dx >= triggerDistance && dy <= maxVerticalMove && elapsed <= 650L && webView.canGoBack()) {
+                    webView.goBack();
+                    return true;
+                }
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    private float dpToPx(float dp) {
+        return dp * getResources().getDisplayMetrics().density;
     }
 
     private void loadInitialIntent(Intent intent) {
@@ -214,6 +345,9 @@ public final class SplashActivity extends Activity {
         firstPageVisible = false;
         errorPanel.setVisibility(View.GONE);
         webView.setVisibility(View.VISIBLE);
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setRefreshing(false);
+        }
         updateProgress(0);
         if (statusText != null) {
             statusText.setText(R.string.loading_preparing);
@@ -299,6 +433,9 @@ public final class SplashActivity extends Activity {
     private void showError() {
         errorVisible = true;
         handler.removeCallbacksAndMessages(null);
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setRefreshing(false);
+        }
         if (splashOverlay != null) {
             splashOverlay.setVisibility(View.GONE);
         }

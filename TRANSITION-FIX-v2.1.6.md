@@ -1,4 +1,4 @@
-# HausaNovels TWA v2.1.6 transition background fix
+# HausaNovels TWA v2.1.7 transition background fix
 
 This build keeps the same package, version name, version code, signing-secret names, Google return flow, icon, splash screen and TWA setup.
 
@@ -14,8 +14,8 @@ Changed areas:
 Unchanged:
 
 - Package: `ng.hausanovels.app`
-- Version name: `2.1.6`
-- Version code: `216`
+- Version name: `2.1.7`
+- Version code: `217`
 - Signing secret names
 - Website URL
 - Digital Asset Links setup

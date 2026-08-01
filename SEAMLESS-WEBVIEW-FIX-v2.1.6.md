@@ -1,10 +1,10 @@
-# HausaNovels v2.1.6 Seamless WebView Fix
+# HausaNovels v2.1.7 Seamless WebView Fix
 
 This package keeps the app identity unchanged:
 
 - Package: `ng.hausanovels.app`
-- Version name: `2.1.6`
-- Version code: `216`
+- Version name: `2.1.7`
+- Version code: `217`
 - Existing GitHub signing secret names are unchanged.
 
 ## Why this build exists

@@ -1,10 +1,10 @@
-# HausaNovels TWA v2.1.6 — repository cleanup and runtime repair
+# HausaNovels TWA v2.1.7 — repository cleanup and runtime repair
 
 Package identity remains unchanged:
 
 - Application ID: `ng.hausanovels.app`
-- Version name: `2.1.6`
-- Version code: `216`
+- Version name: `2.1.7`
+- Version code: `217`
 
 ## Permanent repository cleanup
 

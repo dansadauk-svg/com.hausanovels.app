@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate HausaNovels v2.1.6 seamless WebView source before Gradle starts."""
+"""Validate HausaNovels v2.1.7 seamless WebView source before Gradle starts."""
 from pathlib import Path
 import re
 import sys
@@ -46,14 +46,16 @@ app_gradle_text = APP_GRADLE.read_text(errors="replace")
 for required in (
     f'namespace "{EXPECTED_PACKAGE}"',
     f'applicationId "{EXPECTED_PACKAGE}"',
-    'versionCode 216',
-    'versionName "2.1.6"',
+    'versionCode 217',
+    'versionName "2.1.7"',
 ):
     if required not in app_gradle_text:
         errors.append(f"Missing Gradle setting: {required}")
 
 if "androidbrowserhelper" in app_gradle_text:
     errors.append("TWA androidbrowserhelper dependency must not be present in the seamless WebView build")
+if "androidx.swiperefreshlayout:swiperefreshlayout" not in app_gradle_text:
+    errors.append("SwipeRefreshLayout dependency is required for pull-to-refresh")
 
 # Resource definitions from values XML and file-based resource directories.
 definitions: dict[str, set[str]] = {}
@@ -153,4 +155,4 @@ if errors:
         print(error, file=sys.stderr)
     raise SystemExit(1)
 
-print("HausaNovels v2.1.6 seamless WebView package, manifest and Android resources verified.")
+print("HausaNovels v2.1.7 seamless WebView package, manifest and Android resources verified.")
