@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate HausaNovels v2.1.7 seamless WebView source before Gradle starts."""
+"""Validate HausaNovels v2.1.8 seamless WebView source before Gradle starts."""
 from pathlib import Path
 import re
 import sys
@@ -42,12 +42,25 @@ for java_path in sorted(EXPECTED_JAVA):
     if source.exists() and f"package {EXPECTED_PACKAGE};" not in source.read_text(errors="replace"):
         errors.append(f"Wrong Java package declaration: {java_path}")
 
+launcher_source = JAVA / "ng/hausanovels/app/SplashActivity.java"
+if launcher_source.exists():
+    launcher_text = launcher_source.read_text(errors="replace")
+    for required_navigation_code in (
+        "registerOnBackInvokedCallback",
+        "unregisterOnBackInvokedCallback",
+        "handleBackNavigation",
+        "webView.canGoBack()",
+        "back_again_to_exit",
+    ):
+        if required_navigation_code not in launcher_text:
+            errors.append(f"Missing gesture navigation implementation: {required_navigation_code}")
+
 app_gradle_text = APP_GRADLE.read_text(errors="replace")
 for required in (
     f'namespace "{EXPECTED_PACKAGE}"',
     f'applicationId "{EXPECTED_PACKAGE}"',
-    'versionCode 217',
-    'versionName "2.1.7"',
+    'versionCode 218',
+    'versionName "2.1.8"',
 ):
     if required not in app_gradle_text:
         errors.append(f"Missing Gradle setting: {required}")
@@ -155,4 +168,4 @@ if errors:
         print(error, file=sys.stderr)
     raise SystemExit(1)
 
-print("HausaNovels v2.1.7 seamless WebView package, manifest and Android resources verified.")
+print("HausaNovels v2.1.8 seamless WebView package, manifest and Android resources verified.")

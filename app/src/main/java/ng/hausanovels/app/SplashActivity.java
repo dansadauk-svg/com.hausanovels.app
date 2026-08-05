@@ -8,9 +8,11 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.net.http.SslError;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -26,6 +28,10 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
@@ -39,10 +45,15 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 public final class SplashActivity extends Activity {
     private static final String TAG = "HausaNovelsApp";
     private static final String HOME_URL = "https://hausanovels.ng/?utm_source=android&app=1";
-    private static final String APP_USER_AGENT = "HausaNovelsApp/2.1.7";
+    private static final String APP_USER_AGENT = "HausaNovelsApp/2.1.8";
     private static final int FILE_CHOOSER_REQUEST_CODE = 7001;
     private static final long MIN_SPLASH_MS = 1600L;
     private static final long HIDE_DELAY_MS = 180L;
+    private static final long EXIT_CONFIRM_WINDOW_MS = 2000L;
+    private static final long SWIPE_MAX_DURATION_MS = 850L;
+    private static final float SWIPE_EDGE_WIDTH_DP = 64f;
+    private static final float SWIPE_TRIGGER_DISTANCE_DP = 88f;
+    private static final float SWIPE_MAX_VERTICAL_DP = 72f;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -60,6 +71,10 @@ public final class SplashActivity extends Activity {
     private float touchStartX;
     private float touchStartY;
     private long touchStartTime;
+    private long lastExitAttemptTime;
+    private boolean edgeSwipeTracking;
+    private boolean edgeSwipeHandled;
+    private OnBackInvokedCallback backInvokedCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +94,7 @@ public final class SplashActivity extends Activity {
 
         configureSwipeRefresh();
         configureWebView();
+        configureSystemBackNavigation();
         loadInitialIntent(getIntent());
     }
 
@@ -105,6 +121,7 @@ public final class SplashActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        unregisterSystemBackNavigation();
         handler.removeCallbacksAndMessages(null);
         if (filePathCallback != null) {
             filePathCallback.onReceiveValue(null);
@@ -119,12 +136,73 @@ public final class SplashActivity extends Activity {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
+        handleBackNavigation();
+    }
+
+    private void configureSystemBackNavigation() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             return;
         }
-        super.onBackPressed();
+
+        backInvokedCallback = this::handleBackNavigation;
+        getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                backInvokedCallback
+        );
+    }
+
+    private void unregisterSystemBackNavigation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && backInvokedCallback != null) {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backInvokedCallback);
+            backInvokedCallback = null;
+        }
+    }
+
+    private void handleBackNavigation() {
+        if (webView != null) {
+            if (errorVisible && errorPanel != null && errorPanel.getVisibility() == View.VISIBLE) {
+                errorVisible = false;
+                errorPanel.setVisibility(View.GONE);
+                webView.setVisibility(View.VISIBLE);
+                String currentUrl = webView.getUrl();
+                if (currentUrl == null || currentUrl.isEmpty()) {
+                    webView.loadUrl(HOME_URL);
+                } else {
+                    webView.reload();
+                }
+                resetExitConfirmation();
+                return;
+            }
+
+            if (webView.canGoBack()) {
+                webView.goBack();
+                resetExitConfirmation();
+                return;
+            }
+
+            String currentUrl = webView.getUrl();
+            if (!isAppHomeUrl(currentUrl)) {
+                webView.loadUrl(HOME_URL);
+                resetExitConfirmation();
+                return;
+            }
+        }
+
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastExitAttemptTime <= EXIT_CONFIRM_WINDOW_MS) {
+            finish();
+            return;
+        }
+
+        lastExitAttemptTime = now;
+        Toast.makeText(this, R.string.back_again_to_exit, Toast.LENGTH_SHORT).show();
+    }
+
+    private void resetExitConfirmation() {
+        lastExitAttemptTime = 0L;
     }
 
     private void applyWindowColors() {
@@ -140,7 +218,10 @@ public final class SplashActivity extends Activity {
         }
         swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#0F7B45"), Color.parseColor("#D79D2A"));
         swipeRefreshLayout.setProgressBackgroundColorSchemeColor(Color.parseColor("#FFF8EF"));
-        swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> webView != null && webView.getScrollY() > 0);
+        swipeRefreshLayout.setOnChildScrollUpCallback(
+                (parent, child) -> webView != null && webView.canScrollVertically(-1)
+        );
+        swipeRefreshLayout.setDistanceToTriggerSync((int) dpToPx(96f));
         swipeRefreshLayout.setOnRefreshListener(() -> {
             if (webView != null) {
                 webView.reload();
@@ -295,22 +376,59 @@ public final class SplashActivity extends Activity {
             case MotionEvent.ACTION_DOWN:
                 touchStartX = event.getX();
                 touchStartY = event.getY();
-                touchStartTime = System.currentTimeMillis();
+                touchStartTime = SystemClock.elapsedRealtime();
+                edgeSwipeTracking = touchStartX <= dpToPx(SWIPE_EDGE_WIDTH_DP);
+                edgeSwipeHandled = false;
                 return false;
-            case MotionEvent.ACTION_UP:
-                float dx = event.getX() - touchStartX;
-                float dy = Math.abs(event.getY() - touchStartY);
-                long elapsed = System.currentTimeMillis() - touchStartTime;
-                float edgeWidth = dpToPx(42f);
-                float triggerDistance = dpToPx(92f);
-                float maxVerticalMove = dpToPx(80f);
-                if (touchStartX <= edgeWidth && dx >= triggerDistance && dy <= maxVerticalMove && elapsed <= 650L && webView.canGoBack()) {
-                    webView.goBack();
+
+            case MotionEvent.ACTION_MOVE:
+                if (!edgeSwipeTracking || edgeSwipeHandled) {
+                    return edgeSwipeHandled;
+                }
+
+                float moveX = event.getX() - touchStartX;
+                float moveY = Math.abs(event.getY() - touchStartY);
+                if (moveX < 0f || moveY > dpToPx(SWIPE_MAX_VERTICAL_DP)) {
+                    edgeSwipeTracking = false;
+                    return false;
+                }
+
+                if (moveX >= dpToPx(SWIPE_TRIGGER_DISTANCE_DP) && moveX > moveY * 1.35f) {
+                    edgeSwipeHandled = true;
+                    handleBackNavigation();
                     return true;
                 }
                 return false;
-            default:
+
+            case MotionEvent.ACTION_UP:
+                if (edgeSwipeHandled) {
+                    edgeSwipeTracking = false;
+                    return true;
+                }
+
+                float dx = event.getX() - touchStartX;
+                float dy = Math.abs(event.getY() - touchStartY);
+                long elapsed = SystemClock.elapsedRealtime() - touchStartTime;
+                boolean validSwipe = edgeSwipeTracking
+                        && dx >= dpToPx(SWIPE_TRIGGER_DISTANCE_DP)
+                        && dx > dy * 1.35f
+                        && dy <= dpToPx(SWIPE_MAX_VERTICAL_DP)
+                        && elapsed <= SWIPE_MAX_DURATION_MS;
+                edgeSwipeTracking = false;
+                if (validSwipe) {
+                    edgeSwipeHandled = true;
+                    handleBackNavigation();
+                    return true;
+                }
                 return false;
+
+            case MotionEvent.ACTION_CANCEL:
+                edgeSwipeTracking = false;
+                edgeSwipeHandled = false;
+                return false;
+
+            default:
+                return edgeSwipeHandled;
         }
     }
 
@@ -463,6 +581,36 @@ public final class SplashActivity extends Activity {
         }
         String host = uri.getHost();
         return "hausanovels.ng".equalsIgnoreCase(host) || "www.hausanovels.ng".equalsIgnoreCase(host);
+    }
+
+    private static boolean isAppHomeUrl(String rawUrl) {
+        if (rawUrl == null || rawUrl.isEmpty()) {
+            return true;
+        }
+
+        Uri uri = Uri.parse(rawUrl);
+        if (!isSafeHausaUrl(uri)) {
+            return false;
+        }
+
+        String path = uri.getPath();
+        if (path != null && !path.isEmpty() && !"/".equals(path)) {
+            return false;
+        }
+
+        String fragment = uri.getFragment();
+        if (fragment != null && !fragment.isEmpty()) {
+            return false;
+        }
+
+        for (String parameter : uri.getQueryParameterNames()) {
+            if (!"app".equals(parameter)
+                    && !"utm_source".equals(parameter)
+                    && !"reload".equals(parameter)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static Uri ensureAppMode(Uri uri) {

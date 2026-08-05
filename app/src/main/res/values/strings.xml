@@ -8,4 +8,5 @@
     <string name="retry">Try Again</string>
     <string name="no_browser_available">No compatible browser is available to complete this action.</string>
     <string name="asset_statements" translatable="false">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://hausanovels.ng\"}}]</string>
+    <string name="back_again_to_exit">Swipe or press back again to exit Hausa Novels</string>
 </resources>
